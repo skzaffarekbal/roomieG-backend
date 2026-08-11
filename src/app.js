@@ -39,7 +39,8 @@ connectDB()
     const PORT = process.env.PORT || 7777;
     const HOST = process.env.HOST || '127.0.0.1';
 
-    app.listen(PORT, HOST, () => console.log(`Server Running at http://${HOST}:${PORT}`));
+    // app.listen(PORT, HOST, () => console.log(`Server Running at http://${HOST}:${PORT}`));
+    app.listen(PORT, HOST, () => console.log(`Server Running on PORT : ${PORT}`));
   })
   .catch((err) => {
     console.error("Database can't connect : ", err.message);
