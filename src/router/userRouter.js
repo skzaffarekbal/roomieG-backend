@@ -1,7 +1,7 @@
 const express = require('express');
 const { userAuth } = require('../middlewares/auth');
-const ConnectioRequest = require('../model/ConnectionRequest');
-const User = require('../model/User');
+const ConnectioRequest = require('../model/connectionRequest');
+const User = require('../model/user');
 
 const userRouter = express.Router();
 const USER_POPULATE = 'firstName lastName photoUrl gender age about createdAt';
