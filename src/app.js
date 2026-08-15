@@ -24,7 +24,7 @@ const connectionRouter = require('./router/connectionRouter');
 const userRouter = require('./router/userRouter');
 
 app.get('/', (req, res) => {
-  res.send('API of DevTinder');
+  res.send('Welcome to API of RoomieG');
 });
 
 app.use('/', authRouter);
