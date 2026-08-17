@@ -22,6 +22,7 @@ const authRouter = require('./router/authRouter');
 const profileRouter = require('./router/profileRouter');
 const connectionRouter = require('./router/connectionRouter');
 const userRouter = require('./router/userRouter');
+const paymentRouter = require('./router/paymentRouter');
 
 app.get('/', (req, res) => {
   res.send('Welcome to API of RoomieG');
@@ -31,6 +32,7 @@ app.use('/', authRouter);
 app.use('/', profileRouter);
 app.use('/', connectionRouter);
 app.use('/', userRouter);
+app.use('/', paymentRouter);
 
 connectDB()
   .then(() => {
