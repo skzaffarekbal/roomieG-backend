@@ -53,6 +53,14 @@ const userSchema = mongoose.Schema(
         }
       },
     },
+    isPremium: {
+      type: Boolean,
+      default: false,
+    },
+    membershipType: {
+      type: String,
+      default: 'free',
+    },
     photoUrl: {
       type: String,
       default: 'https://geographyandyou.com/images/user-profile.png',
