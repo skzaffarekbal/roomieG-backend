@@ -4,6 +4,7 @@ const razorpayInstance = require('../utils/razorpay');
 const { membershipAmount, generateReceiptId } = require('../utils/constant');
 const Payment = require('../model/payment');
 const { validateWebhookSignature } = require('razorpay/dist/utils/razorpay-utils');
+const User = require('../model/user');
 
 const paymentRouter = express.Router();
 
@@ -54,7 +55,7 @@ paymentRouter.post('/payment/webhook', async (req, res) => {
     );
 
     if (!isWebhookValid) {
-      console.log('INvalid Webhook Signature');
+      console.log('Invalid Webhook Signature');
       return res.status(400).json({ msg: 'Webhook signature is invalid' });
     }
     console.log('Valid Webhook Signature');
