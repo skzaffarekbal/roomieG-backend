@@ -1,4 +1,5 @@
 const express = require('express');
+const { createServer } = require('node:http');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 require('dotenv').config();
@@ -23,6 +24,10 @@ const profileRouter = require('./router/profileRouter');
 const connectionRouter = require('./router/connectionRouter');
 const userRouter = require('./router/userRouter');
 const paymentRouter = require('./router/paymentRouter');
+const initializeSocket = require('./utils/socket');
+
+const server = createServer(app);
+initializeSocket(server);
 
 app.get('/', (req, res) => {
   res.send('Welcome to API of RoomieG');
@@ -41,7 +46,7 @@ connectDB()
     const PORT = process.env.PORT || 7777;
     const HOST = process.env.HOST || '127.0.0.1';
 
-    app.listen(PORT, HOST, () => console.log(`Server Running at http://${HOST}:${PORT}`));
+    server.listen(PORT, HOST, () => console.log(`Server Running at http://${HOST}:${PORT}`));
   })
   .catch((err) => {
     console.error("Database can't connect : ", err.message);
