@@ -58,8 +58,8 @@ const initializeSocket = (server) => {
       socket.join(roomId);
 
       try {
-        const chatHistory = await Chat.find({ roomId }).sort({ createdAt: 1 }).limit(50);
-        socket.emit('chatHistory', chatHistory);
+        const chatHistory = await Chat.find({ roomId }).sort({ createdAt: -1 }).limit(20);
+        socket.emit('chatHistory', chatHistory.reverse());
       } catch (error) {
         console.error(error);
       }
@@ -68,7 +68,10 @@ const initializeSocket = (server) => {
     socket.on('sendMessage', async (data) => {
       let { loginUserId, targetUserId, text } = data;
       const isAllowed = await checkChatAccess(loginUserId, targetUserId);
-      if (!isAllowed) return;
+      if (!isAllowed) {
+        socket.emit('chatError', 'Could not join chat.');
+        return;
+      }
 
       let roomId = getSecretRoomId(loginUserId, targetUserId);
       try {
@@ -87,7 +90,10 @@ const initializeSocket = (server) => {
 
     socket.on('markAsSeen', async ({ loginUserId, targetUserId }) => {
       const isAllowed = await checkChatAccess(loginUserId, targetUserId);
-      if (!isAllowed) return;
+      if (!isAllowed) {
+        socket.emit('chatError', 'Could not join chat.');
+        return;
+      }
 
       let roomId = getSecretRoomId(loginUserId, targetUserId);
       try {
@@ -96,6 +102,22 @@ const initializeSocket = (server) => {
           { $set: { seen: true, seenAt: new Date() } },
         );
         io.to(roomId).emit('messagesSeen', { roomId, seenBy: loginUserId });
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    socket.on('fetchOldMessages', async ({ loginUserId, targetUserId, skip }) => {
+      const isAllowed = await checkChatAccess(loginUserId, targetUserId);
+      if (!isAllowed) return;
+
+      let roomId = getSecretRoomId(loginUserId, targetUserId);
+      try {
+        const olderMessages = await Chat.find({ roomId })
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(20);
+        socket.emit('olderMessages', olderMessages.reverse());
       } catch (error) {
         console.error(error);
       }
