@@ -2,7 +2,7 @@ const socket = require('socket.io');
 const crypto = require('node:crypto');
 const Chat = require('../model/chat');
 
-const getSecretRoomId = ({ loginUserId, targetUserId }) => {
+const getSecretRoomId = (loginUserId, targetUserId) => {
   return crypto
     .createHash('sha256')
     .update([loginUserId, targetUserId].sort().join('_'))
@@ -43,6 +43,19 @@ const initializeSocket = (server) => {
         io.to(roomId).emit('receivedMessage', newMessage);
       } catch (error) {
         console.error(err);
+      }
+    });
+
+    socket.on('markAsSeen', async ({ loginUserId, targetUserId }) => {
+      let roomId = getSecretRoomId(loginUserId, targetUserId);
+      try {
+        await Chat.updateMany(
+          { roomId, receiverId: loginUserId, seen: false },
+          { $set: { seen: true, seenAt: new Date() } },
+        );
+        io.to(roomId).emit('messagesSeen', { roomId, seenBy: loginUserId });
+      } catch (error) {
+        console.error(error);
       }
     });
 
