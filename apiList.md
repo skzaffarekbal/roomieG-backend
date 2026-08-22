@@ -29,5 +29,6 @@ POST /request/review/:status/:requestId ✅
 - GET /user/request/received ✅
 - GET /user/connections ✅
 - GET /user/feed ✅
+- GET /user/:targetId ✅
 
 Status: ignored, interested, accepted, rejected
