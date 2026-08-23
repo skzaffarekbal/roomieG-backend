@@ -68,7 +68,6 @@ const initializeSocket = (server) => {
       }
       socket.userId = String(loginUserId);
       socket.join(String(loginUserId));
-      console.log('User ' + socket.userId + ' joined chat notification room.');
     });
 
     socket.on('joinChat', async ({ loginUserId, targetUserId }) => {
@@ -112,8 +111,6 @@ const initializeSocket = (server) => {
         const isReceiverInRoom = allConnectedSockets.some(
           (s) => String(s.userId) === String(targetUserId) && String(s.id) !== String(socket.id),
         );
-        console.log('allConnectedSockets :', allConnectedSockets);
-        console.log('isReceiverInRoom :', isReceiverInRoom);
         if (isReceiverInRoom) {
           io.to(String(targetUserId)).emit('unreadCountUpdate', {
             senderId: String(loginUserId),

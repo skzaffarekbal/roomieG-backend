@@ -55,13 +55,17 @@ userRouter.get('/feed', userAuth, async (req, res) => {
     const skip = (page - 1) * limit;
 
     const allConnection = await ConnectioRequest.find({
-      $or: [{ fromUserId: loggedInUser._id }, { toUserId: loggedInUser._id }],
+      $or: [{ fromUserId: loggedInUser._id }, { toUserId: loggedInUser._id, status: 'accepted' }],
     }).select('fromUserId toUserId');
 
     const hideUserFromFeed = new Set();
+    hideUserFromFeed.add(loggedInUser._id);
     allConnection.forEach((connect) => {
-      hideUserFromFeed.add(connect.fromUserId);
-      hideUserFromFeed.add(connect.toUserId);
+      if (connect.fromUserId.toString() === loggedInUser._id.toString()) {
+        hideUserFromFeed.add(connect.toUserId);
+      } else {
+        hideUserFromFeed.add(connect.fromUserId);
+      }
     });
 
     const feedUserList = await User.find({
