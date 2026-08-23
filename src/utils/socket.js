@@ -20,7 +20,7 @@ const initializeSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
-    const checkChatAccess = async (loginUserId, targetUserId) => {
+    const isAuthorized = async (loginUserId) => {
       try {
         const cookies = socket.request.headers.cookie || '';
         const tokenCookie = cookies.split('; ').find((row) => row.startsWith('token='));
@@ -30,6 +30,19 @@ const initializeSocket = (server) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         if (decoded._id !== loginUserId) throw new Error('Unauthorized user');
+
+        return true;
+      } catch (error) {
+        console.error('Authentication failed:', error.message);
+        return false;
+      }
+    };
+
+    const checkChatAccess = async (loginUserId, targetUserId) => {
+      try {
+        if (loginUserId === targetUserId) return false;
+        const isUserAllowed = await isAuthorized(loginUserId);
+        if (!isUserAllowed) return false;
 
         const connection = await ConnectionRequest.findOne({
           $or: [
@@ -47,6 +60,17 @@ const initializeSocket = (server) => {
       }
     };
 
+    socket.on('chatNotification', async ({ loginUserId }) => {
+      const isAllowed = await isAuthorized(loginUserId);
+      if (!isAllowed) {
+        socket.emit('chatNotificationError', 'User is not authorized.');
+        return;
+      }
+      socket.userId = String(loginUserId);
+      socket.join(String(loginUserId));
+      console.log('User ' + socket.userId + ' joined chat notification room.');
+    });
+
     socket.on('joinChat', async ({ loginUserId, targetUserId }) => {
       const isAllowed = await checkChatAccess(loginUserId, targetUserId);
       if (!isAllowed) {
@@ -58,8 +82,8 @@ const initializeSocket = (server) => {
       socket.join(roomId);
 
       try {
-        const chatHistory = await Chat.find({ roomId }).sort({ createdAt: 1 }).limit(50);
-        socket.emit('chatHistory', chatHistory);
+        const chatHistory = await Chat.find({ roomId }).sort({ createdAt: -1 }).limit(20);
+        socket.emit('chatHistory', chatHistory.reverse());
       } catch (error) {
         console.error(error);
       }
@@ -68,7 +92,10 @@ const initializeSocket = (server) => {
     socket.on('sendMessage', async (data) => {
       let { loginUserId, targetUserId, text } = data;
       const isAllowed = await checkChatAccess(loginUserId, targetUserId);
-      if (!isAllowed) return;
+      if (!isAllowed) {
+        socket.emit('chatError', 'Could not join chat.');
+        return;
+      }
 
       let roomId = getSecretRoomId(loginUserId, targetUserId);
       try {
@@ -80,14 +107,29 @@ const initializeSocket = (server) => {
         });
         await newMessage.save();
         io.to(roomId).emit('receivedMessage', newMessage);
+
+        const allConnectedSockets = await io.fetchSockets();
+        const isReceiverInRoom = allConnectedSockets.some(
+          (s) => String(s.userId) === String(targetUserId) && String(s.id) !== String(socket.id),
+        );
+        console.log('allConnectedSockets :', allConnectedSockets);
+        console.log('isReceiverInRoom :', isReceiverInRoom);
+        if (isReceiverInRoom) {
+          io.to(String(targetUserId)).emit('unreadCountUpdate', {
+            senderId: String(loginUserId),
+          });
+        }
       } catch (error) {
-        console.error(err);
+        console.error(error);
       }
     });
 
     socket.on('markAsSeen', async ({ loginUserId, targetUserId }) => {
       const isAllowed = await checkChatAccess(loginUserId, targetUserId);
-      if (!isAllowed) return;
+      if (!isAllowed) {
+        socket.emit('chatError', 'Could not join chat.');
+        return;
+      }
 
       let roomId = getSecretRoomId(loginUserId, targetUserId);
       try {
@@ -96,6 +138,22 @@ const initializeSocket = (server) => {
           { $set: { seen: true, seenAt: new Date() } },
         );
         io.to(roomId).emit('messagesSeen', { roomId, seenBy: loginUserId });
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    socket.on('fetchOldMessages', async ({ loginUserId, targetUserId, skip }) => {
+      const isAllowed = await checkChatAccess(loginUserId, targetUserId);
+      if (!isAllowed) return;
+
+      let roomId = getSecretRoomId(loginUserId, targetUserId);
+      try {
+        const olderMessages = await Chat.find({ roomId })
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(20);
+        socket.emit('olderMessages', olderMessages.reverse());
       } catch (error) {
         console.error(error);
       }
