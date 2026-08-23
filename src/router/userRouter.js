@@ -2,6 +2,7 @@ const express = require('express');
 const { userAuth } = require('../middlewares/auth');
 const ConnectioRequest = require('../model/connectionRequest');
 const User = require('../model/user');
+const Chat = require('../model/chat');
 
 const userRouter = express.Router();
 const USER_POPULATE = 'firstName lastName photoUrl gender age about createdAt';
@@ -76,7 +77,7 @@ userRouter.get('/feed', userAuth, async (req, res) => {
   }
 });
 
-userRouter.get('/user/:targetId', userAuth, async (req, res) => {
+userRouter.get('/user/profile/:targetId', userAuth, async (req, res) => {
   try {
     const { targetId } = req.params;
 
@@ -84,6 +85,31 @@ userRouter.get('/user/:targetId', userAuth, async (req, res) => {
     if (!targetUser) return res.status(404).json({ message: 'User not found' });
 
     res.status(200).json({ data: targetUser, message: 'User Data' });
+  } catch (error) {
+    return res.status(500).json({ status: 500, error: error.message });
+  }
+});
+
+userRouter.get('/user/unread-chats-count', userAuth, async (req, res) => {
+  try {
+    const loggedInUser = req.loggedInUser;
+
+    const unreadCounts = await Chat.aggregate([
+      { $match: { receiverId: loggedInUser._id, seen: false } },
+      { $group: { _id: '$senderId', count: { $sum: 1 } } },
+    ]);
+
+    const userWiseUnreadCounts = {};
+    let totalUnreadCount = 0;
+    unreadCounts.forEach((chat) => {
+      userWiseUnreadCounts[chat._id.toString()] = chat.count;
+      totalUnreadCount += chat.count;
+    });
+
+    res.status(200).json({
+      data: { userWiseUnreadCounts, totalUnreadCount },
+      message: 'Unread Chats Count',
+    });
   } catch (error) {
     return res.status(500).json({ status: 500, error: error.message });
   }

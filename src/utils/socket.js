@@ -20,7 +20,7 @@ const initializeSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
-    const checkChatAccess = async (loginUserId, targetUserId) => {
+    const isAuthorized = async (loginUserId) => {
       try {
         const cookies = socket.request.headers.cookie || '';
         const tokenCookie = cookies.split('; ').find((row) => row.startsWith('token='));
@@ -30,6 +30,19 @@ const initializeSocket = (server) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         if (decoded._id !== loginUserId) throw new Error('Unauthorized user');
+
+        return true;
+      } catch (error) {
+        console.error('Authentication failed:', error.message);
+        return false;
+      }
+    };
+
+    const checkChatAccess = async (loginUserId, targetUserId) => {
+      try {
+        if (loginUserId === targetUserId) return false;
+        const isUserAllowed = await isAuthorized(loginUserId);
+        if (!isUserAllowed) return false;
 
         const connection = await ConnectionRequest.findOne({
           $or: [
@@ -46,6 +59,17 @@ const initializeSocket = (server) => {
         return false;
       }
     };
+
+    socket.on('chatNotification', async ({ loginUserId }) => {
+      const isAllowed = await isAuthorized(loginUserId);
+      if (!isAllowed) {
+        socket.emit('chatNotificationError', 'User is not authorized.');
+        return;
+      }
+      socket.userId = String(loginUserId);
+      socket.join(String(loginUserId));
+      console.log('User ' + socket.userId + ' joined chat notification room.');
+    });
 
     socket.on('joinChat', async ({ loginUserId, targetUserId }) => {
       const isAllowed = await checkChatAccess(loginUserId, targetUserId);
@@ -83,8 +107,20 @@ const initializeSocket = (server) => {
         });
         await newMessage.save();
         io.to(roomId).emit('receivedMessage', newMessage);
+
+        const allConnectedSockets = await io.fetchSockets();
+        const isReceiverInRoom = allConnectedSockets.some(
+          (s) => String(s.userId) === String(targetUserId) && String(s.id) !== String(socket.id),
+        );
+        console.log('allConnectedSockets :', allConnectedSockets);
+        console.log('isReceiverInRoom :', isReceiverInRoom);
+        if (isReceiverInRoom) {
+          io.to(String(targetUserId)).emit('unreadCountUpdate', {
+            senderId: String(loginUserId),
+          });
+        }
       } catch (error) {
-        console.error(err);
+        console.error(error);
       }
     });
 

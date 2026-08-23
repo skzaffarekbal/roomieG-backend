@@ -7,3 +7,23 @@
 - implement swagger
 
 - Admin user routes and functionality
+
+- have to implement Typing concept
+
+```
+    socket.on('typing', async ({ loginUserId, targetUserId }) => {
+      const isAllowed = await checkChatAccess(loginUserId, targetUserId);
+      if (!isAllowed) return;
+
+      const roomId = getSecretRoomId(loginUserId, targetUserId);
+      io.to(roomId).emit('userTyping', { loginUserId, targetUserId, roomId });
+    });
+
+    socket.on('typingStopped', async ({ loginUserId, targetUserId }) => {
+      const isAllowed = await checkChatAccess(loginUserId, targetUserId);
+      if (!isAllowed) return;
+
+      const roomId = getSecretRoomId(loginUserId, targetUserId);
+      io.to(roomId).emit('userTypingStopped', { loginUserId, targetUserId, roomId });
+    });
+```

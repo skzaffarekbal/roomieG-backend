@@ -30,5 +30,6 @@ POST /request/review/:status/:requestId ✅
 - GET /user/connections ✅
 - GET /user/feed ✅
 - GET /user/:targetId ✅
+- GET /user/unread-chats-count ✅
 
 Status: ignored, interested, accepted, rejected
