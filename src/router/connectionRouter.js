@@ -2,51 +2,89 @@ const express = require('express');
 const { userAuth } = require('../middlewares/auth');
 const User = require('../model/user');
 const ConnectioRequest = require('../model/connectionRequest');
+const { dailySwipeLimit } = require('../middlewares/dailySwipeLimit');
 
 const connectionRouter = express.Router();
 
-connectionRouter.post('/request/send/:status/:toUserId', userAuth, async (req, res) => {
-  try {
-    const fromUserId = req.loggedInUser._id;
-    const { toUserId, status } = req.params;
+connectionRouter.post(
+  '/request/send/:status/:toUserId',
+  userAuth,
+  dailySwipeLimit,
+  async (req, res) => {
+    try {
+      const fromUserId = req.loggedInUser._id;
+      const { toUserId, status } = req.params;
 
-    const allowedStatus = ['ignored', 'interested'];
-    if (!allowedStatus.includes(status)) throw new Error('Invalid Status');
+      const allowedStatus = ['ignored', 'interested'];
+      if (!allowedStatus.includes(status)) throw new Error('Invalid Status');
 
-    const toUser = await User.findById(toUserId);
-    if (!toUser) throw new Error('Invalid User');
+      if (fromUserId.toString() === toUserId.toString()) {
+        return res.status(400).json({ error: 'Self-interaction is forbidden.' });
+      }
 
-    const existingConnectionRequest = await ConnectioRequest.findOne({
-      $or: [
-        { fromUserId, toUserId },
-        { fromUserId: toUserId, toUserId: fromUserId },
-      ],
-    });
+      const toUser = await User.findById(toUserId);
+      if (!toUser) throw new Error('The profile you are trying to swipe on does not exist.');
 
-    if (existingConnectionRequest) {
-      return res.status(400).json({ message: 'Connection Request Already Exists!!' });
+      const existingConnectionRequest = await ConnectioRequest.findOne({
+        $or: [
+          { fromUserId, toUserId },
+          { fromUserId: toUserId, toUserId: fromUserId },
+        ],
+      });
+
+      if (existingConnectionRequest) {
+        if (existingConnectionRequest.status === 'accepted') {
+          return res.status(400).json({
+            message: 'You are already matched with this user. Modification denied.',
+          });
+        }
+        if (existingConnectionRequest.fromUserId.toString() === fromUserId) {
+          return res.status(400).json({
+            message: 'You have already swiped on this profile earlier.',
+          });
+        }
+      }
+
+      // 1. Try to find if the target user has an active interest record pointing to us
+      if (status === 'interested') {
+        const mutualMatch = await ConnectioRequest.findOneAndUpdate(
+          {
+            fromUserId: toUserId,
+            toUserId: fromUserId,
+            status: 'interested',
+          },
+          { $set: { status: 'accepted' } },
+          { new: true },
+        );
+
+        if (mutualMatch) {
+          return res.status(200).json({
+            message: "It's a match!",
+            status: 'accepted',
+          });
+        }
+      }
+
+      // 2. Safe standalone record execution via Upsert
+      const savedAction = await ConnectioRequest.findOneAndUpdate(
+        { fromUserId: fromUserId, toUserId: toUserId },
+        { $set: { status } },
+        { upsert: true, new: true },
+      );
+
+      return res.status(200).json({
+        message: 'Swipe recorded successfully.',
+        status: savedAction.status,
+      });
+    } catch (error) {
+      if (error.name === 'ValidationError') {
+        const messages = Object.values(error.errors).map((err) => err.message);
+        return res.status(400).json({ errors: messages.join(', ') });
+      }
+      return res.status(500).json({ status: 500, error: error.message });
     }
-
-    const connectionRequest = new ConnectioRequest({
-      fromUserId,
-      toUserId,
-      status,
-    });
-
-    const data = await connectionRequest.save();
-
-    res.status(200).json({
-      message: req.loggedInUser.firstName + ' is ' + status + ' to ' + toUser.firstName,
-      data: data,
-    });
-  } catch (error) {
-    if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map((err) => err.message);
-      return res.status(400).json({ errors: messages.join(', ') });
-    }
-    return res.status(500).json({ status: 500, error: error.message });
-  }
-});
+  },
+);
 
 connectionRouter.post('/request/review/:status/:requestId', userAuth, async (req, res) => {
   try {
