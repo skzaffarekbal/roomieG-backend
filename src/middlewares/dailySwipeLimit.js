@@ -1,4 +1,4 @@
-const ConnectioRequest = require('../model/connectionRequest');
+const Connection = require('../model/connection');
 
 const dailySwipeLimit = async (req, res, next) => {
   try {
@@ -8,7 +8,7 @@ const dailySwipeLimit = async (req, res, next) => {
     const DAILY_LIMIT = isPremium ? 20 : 10;
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-    const interactionsInLast24Hours = await ConnectioRequest.countDocuments({
+    const interactionsInLast24Hours = await Connection.countDocuments({
       fromUserId: fromUserId,
       createdAt: { $gte: twentyFourHoursAgo },
     });

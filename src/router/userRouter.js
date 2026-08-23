@@ -1,6 +1,6 @@
 const express = require('express');
 const { userAuth } = require('../middlewares/auth');
-const ConnectioRequest = require('../model/connectionRequest');
+const Connection = require('../model/connection');
 const User = require('../model/user');
 const Chat = require('../model/chat');
 
@@ -11,7 +11,7 @@ userRouter.get('/user/request/received', userAuth, async (req, res) => {
   try {
     const loggedInUser = req.loggedInUser;
 
-    const allRequest = await ConnectioRequest.find({
+    const allRequest = await Connection.find({
       toUserId: loggedInUser._id,
       status: 'interested',
     }).populate('fromUserId', USER_POPULATE);
@@ -26,7 +26,7 @@ userRouter.get('/user/connections', userAuth, async (req, res) => {
   try {
     const loggedInUser = req.loggedInUser;
 
-    const allConnectionRaw = await ConnectioRequest.find({
+    const allConnectionRaw = await Connection.find({
       $or: [
         { fromUserId: loggedInUser._id, status: 'accepted' },
         { toUserId: loggedInUser._id, status: 'accepted' },
@@ -54,7 +54,7 @@ userRouter.get('/feed', userAuth, async (req, res) => {
     limit = limit > 50 ? 50 : limit;
     const skip = (page - 1) * limit;
 
-    const allConnection = await ConnectioRequest.find({
+    const allConnection = await Connection.find({
       $or: [{ fromUserId: loggedInUser._id }, { toUserId: loggedInUser._id, status: 'accepted' }],
     }).select('fromUserId toUserId');
 

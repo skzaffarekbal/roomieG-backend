@@ -1,7 +1,7 @@
 const express = require('express');
 const { userAuth } = require('../middlewares/auth');
 const User = require('../model/user');
-const ConnectioRequest = require('../model/connectionRequest');
+const Connection = require('../model/connection');
 const { dailySwipeLimit } = require('../middlewares/dailySwipeLimit');
 
 const connectionRouter = express.Router();
@@ -25,20 +25,20 @@ connectionRouter.post(
       const toUser = await User.findById(toUserId);
       if (!toUser) throw new Error('The profile you are trying to swipe on does not exist.');
 
-      const existingConnectionRequest = await ConnectioRequest.findOne({
+      const existingConnection = await Connection.findOne({
         $or: [
           { fromUserId, toUserId },
           { fromUserId: toUserId, toUserId: fromUserId },
         ],
       });
 
-      if (existingConnectionRequest) {
-        if (existingConnectionRequest.status === 'accepted') {
+      if (existingConnection) {
+        if (existingConnection.status === 'accepted') {
           return res.status(400).json({
             message: 'You are already matched with this user. Modification denied.',
           });
         }
-        if (existingConnectionRequest.fromUserId.toString() === fromUserId) {
+        if (existingConnection.fromUserId.toString() === fromUserId) {
           return res.status(400).json({
             message: 'You have already swiped on this profile earlier.',
           });
@@ -47,7 +47,7 @@ connectionRouter.post(
 
       // 1. Try to find if the target user has an active interest record pointing to us
       if (status === 'interested') {
-        const mutualMatch = await ConnectioRequest.findOneAndUpdate(
+        const mutualMatch = await Connection.findOneAndUpdate(
           {
             fromUserId: toUserId,
             toUserId: fromUserId,
@@ -66,7 +66,7 @@ connectionRouter.post(
       }
 
       // 2. Safe standalone record execution via Upsert
-      const savedAction = await ConnectioRequest.findOneAndUpdate(
+      const savedAction = await Connection.findOneAndUpdate(
         { fromUserId: fromUserId, toUserId: toUserId },
         { $set: { status } },
         { upsert: true, new: true },
@@ -94,17 +94,16 @@ connectionRouter.post('/request/review/:status/:requestId', userAuth, async (req
     const allowedStatus = ['accepted', 'rejected'];
     if (!allowedStatus.includes(status)) throw new Error('Invalid Status');
 
-    const connectionRequest = await ConnectioRequest.findOne({
+    const connection = await Connection.findOne({
       _id: requestId,
       status: 'interested',
       toUserId: loggedInUser._id,
     });
 
-    if (!connectionRequest)
-      return res.status(404).json({ message: 'Connection request not found' });
+    if (!connection) return res.status(404).json({ message: 'Connection request not found' });
 
-    connectionRequest.status = status;
-    const data = await connectionRequest.save();
+    connection.status = status;
+    const data = await connection.save();
 
     res.status(200).json({ message: 'Connection request ' + status, data });
   } catch (error) {
