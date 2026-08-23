@@ -2,7 +2,7 @@ const socket = require('socket.io');
 const crypto = require('node:crypto');
 const Chat = require('../model/chat');
 const jwt = require('jsonwebtoken');
-const ConnectionRequest = require('../model/connectionRequest');
+const Connection = require('../model/connection');
 
 const getSecretRoomId = (loginUserId, targetUserId) => {
   return crypto
@@ -44,7 +44,7 @@ const initializeSocket = (server) => {
         const isUserAllowed = await isAuthorized(loginUserId);
         if (!isUserAllowed) return false;
 
-        const connection = await ConnectionRequest.findOne({
+        const connection = await Connection.findOne({
           $or: [
             { fromUserId: loginUserId, toUserId: targetUserId, status: 'accepted' },
             { fromUserId: targetUserId, toUserId: loginUserId, status: 'accepted' },

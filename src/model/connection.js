@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const connectionRequestSchema = mongoose.Schema(
+const connectionSchema = mongoose.Schema(
   {
     fromUserId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -24,14 +24,14 @@ const connectionRequestSchema = mongoose.Schema(
   { timestamps: true },
 );
 
-connectionRequestSchema.index({ fromUserId: 1, toUserId: 1 });
+connectionSchema.index({ fromUserId: 1, toUserId: 1 });
 
-connectionRequestSchema.pre('save', function () {
-  const connectionRequest = this;
-  if (connectionRequest.fromUserId.equals(connectionRequest.toUserId)) {
+connectionSchema.pre('save', function () {
+  const connection = this;
+  if (connection.fromUserId.equals(connection.toUserId)) {
     throw new Error("Can't send connection request to yourself");
   }
 });
 
-const ConnectioRequest = mongoose.model('ConnectioRequest', connectionRequestSchema);
-module.exports = ConnectioRequest;
+const Connection = mongoose.model('Connection', connectionSchema);
+module.exports = Connection;
