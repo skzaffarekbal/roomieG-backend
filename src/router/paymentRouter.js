@@ -5,6 +5,7 @@ const { membershipAmount, generateReceiptId } = require('../utils/constant');
 const Payment = require('../model/payment');
 const { validateWebhookSignature } = require('razorpay/dist/utils/razorpay-utils');
 const User = require('../model/user');
+const { addDays } = require('date-fns');
 
 const paymentRouter = express.Router();
 
@@ -68,8 +69,10 @@ paymentRouter.post('/payment/webhook', async (req, res) => {
     await payment.save();
 
     const user = await User.findOne({ _id: payment.userId });
-    user.isPremium = true;
-    user.membershipType = payment.notes.membershipType;
+    user.subscription.plan = payment.notes.membershipType;
+    user.subscription.expiresAt = addDays(new Date(), 30);
+    // user.isPremium = true;
+    // user.membershipType = payment.notes.membershipType;
     console.log('User saved');
 
     await user.save();

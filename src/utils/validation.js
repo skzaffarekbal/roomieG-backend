@@ -17,33 +17,6 @@ const validateSignUpData = (req) => {
   }
 };
 
-const validateEditProfileData = (req) => {
-  let data = req.body;
-  const ALLOW_UPDATES = [
-    'firstName',
-    'lastName',
-    'photoUrl',
-    'gender',
-    'about',
-    'age',
-    'skills',
-    'isActive',
-  ];
-  const isUpdateAllowed = Object.keys(data).every((k) => ALLOW_UPDATES.includes(k));
-
-  if (!isUpdateAllowed) throw new Error('Invalid edit request.');
-
-  if (req.body?.skills?.length > 10) throw new Error("Skill can't more than 10");
-
-  if (req.body?.photoUrl && !validator.isURL(req.body?.photoUrl))
-    throw new Error('Invalid URL: ' + req.body?.photoUrl);
-
-  if (req.body?.about && req.body?.about?.length > 1024)
-    throw new Error('About must be in 1000 character.');
-
-  return isUpdateAllowed;
-};
-
 const validatePassword = (req) => {
   const { newPassword, confirmPassword } = req.body;
   if (newPassword !== confirmPassword)
@@ -55,4 +28,4 @@ const validatePassword = (req) => {
     );
 };
 
-module.exports = { validateSignUpData, validateEditProfileData, validatePassword };
+module.exports = { validateSignUpData, validatePassword };

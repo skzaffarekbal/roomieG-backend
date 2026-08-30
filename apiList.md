@@ -9,7 +9,18 @@
 ## profileRouter
 
 - GET /profile/view ✅
-- PATCH /profile/edit ✅
+
+- PATCH /profile/basic ✅
+- PATCH /profile/occupation ✅
+- PATCH /profile/location ✅
+- PATCH /profile/lifestyle ✅
+- PATCH /profile/housing ✅
+- PATCH /profile/photo ✅
+- PATCH /profile/preferences ✅
+- PATCH /profile/privacy ✅
+
+- GET /profile/completion ✅
+
 - PATCH /profile/password ✅
 
 ## connectionRouter

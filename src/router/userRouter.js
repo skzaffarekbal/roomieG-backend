@@ -3,9 +3,10 @@ const { userAuth } = require('../middlewares/auth');
 const Connection = require('../model/connection');
 const User = require('../model/user');
 const Chat = require('../model/chat');
+const { profileCompleted } = require('../middlewares/profileCompleted');
 
 const userRouter = express.Router();
-const USER_POPULATE = 'firstName lastName photoUrl gender age about createdAt';
+const USER_POPULATE = 'firstName lastName photo gender dateOfBirth bio createdAt';
 
 userRouter.get('/user/request/received', userAuth, async (req, res) => {
   try {
@@ -45,6 +46,7 @@ userRouter.get('/user/connections', userAuth, async (req, res) => {
   }
 });
 
+// userRouter.get('/feed', userAuth, profileCompleted, async (req, res) => {
 userRouter.get('/feed', userAuth, async (req, res) => {
   try {
     const loggedInUser = req.loggedInUser;
