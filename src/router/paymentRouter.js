@@ -69,10 +69,25 @@ paymentRouter.post('/payment/webhook', async (req, res) => {
     await payment.save();
 
     const user = await User.findOne({ _id: payment.userId });
+
+    const expiresAt = user?.subscription?.expiresAt
+      ? new Date(user?.subscription?.expiresAt).getTime()
+      : null;
+    const currentTime = new Date().getTime();
+    const currentPlan = user?.subscription?.plan;
+    const isPremium = expiresAt > currentTime && currentPlan !== 'free';
+
+    const FIVE_DAYS_IN_MS = 5 * 24 * 60 * 60 * 1000;
+    const onlyFiveDaysLeft =
+      expiresAt - currentTime > 0 && expiresAt - currentTime < FIVE_DAYS_IN_MS;
+
     user.subscription.plan = payment.notes.membershipType;
-    user.subscription.expiresAt = addDays(new Date(), 30);
-    // user.isPremium = true;
-    // user.membershipType = payment.notes.membershipType;
+
+    if (isPremium && onlyFiveDaysLeft && currentPlan === payment.notes.membershipType) {
+      user.subscription.expiresAt = addDays(new Date(user?.subscription?.expiresAt), 30);
+    } else {
+      user.subscription.expiresAt = addDays(new Date(), 30);
+    }
     console.log('User saved');
 
     await user.save();
