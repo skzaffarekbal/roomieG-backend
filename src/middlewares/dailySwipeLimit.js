@@ -3,9 +3,14 @@ const Connection = require('../model/connection');
 const dailySwipeLimit = async (req, res, next) => {
   try {
     const fromUserId = req.loggedInUser._id;
-    const { isPremium } = req.loggedInUser;
+    const { subscription } = req.loggedInUser;
 
-    const DAILY_LIMIT = isPremium ? 20 : 10;
+    const expiresAt = subscription?.expiresAt ? new Date(subscription?.expiresAt).getTime() : null;
+    const currentTime = new Date().getTime();
+    const currentPlan = subscription?.plan;
+    const isPremium = expiresAt > currentTime && currentPlan !== 'free';
+
+    const DAILY_LIMIT = isPremium ? (currentPlan === 'gold' ? 20 : 10) : 10;
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     const interactionsInLast24Hours = await Connection.countDocuments({
