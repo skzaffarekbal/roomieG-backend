@@ -178,24 +178,26 @@ const userSchema = mongoose.Schema(
     photo: {
       exactPhoto: {
         type: String,
-        default:
-          'https://img.magnific.com/free-psd/contact-icon-illustration-isolated_23-2151903337.jpg',
-        validate(value) {
-          if (value && !validator.isURL(value)) {
-            throw new Error('Invalid exact photo URL: ' + value);
-          }
-        },
+        default: process.env.AWS_IMAGE_URL + 'default.jpeg',
+        // default:
+        //   'https://img.magnific.com/free-psd/contact-icon-illustration-isolated_23-2151903337.jpg',
+        // validate(value) {
+        //   if (value && !validator.isURL(value)) {
+        //     throw new Error('Invalid exact photo URL: ' + value);
+        //   }
+        // },
       },
 
       blurPhoto: {
         type: String,
-        default:
-          'https://img.magnific.com/free-psd/contact-icon-illustration-isolated_23-2151903337.jpg',
-        validate(value) {
-          if (value && !validator.isURL(value)) {
-            throw new Error('Invalid blur photo URL: ' + value);
-          }
-        },
+        default: process.env.AWS_IMAGE_URL + 'default.jpeg',
+        // default:
+        //   'https://img.magnific.com/free-psd/contact-icon-illustration-isolated_23-2151903337.jpg',
+        // validate(value) {
+        //   if (value && !validator.isURL(value)) {
+        //     throw new Error('Invalid blur photo URL: ' + value);
+        //   }
+        // },
       },
     },
 
