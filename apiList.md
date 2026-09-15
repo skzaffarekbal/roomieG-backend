@@ -23,6 +23,8 @@
 
 - PATCH /profile/password ✅
 
+- POST /get-presigned-url ✅
+
 ## connectionRouter
 
 POST /request/send/:status/:userId ✅

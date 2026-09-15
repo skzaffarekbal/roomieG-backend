@@ -72,6 +72,9 @@ userRouter.get('/feed', userAuth, async (req, res) => {
 
     const feedUserList = await User.find({
       _id: { $nin: Array.from(hideUserFromFeed) },
+      // isAdmin: false,
+      // accountStatus: 'active',
+      // profileCompleted: true,
     })
       .select(USER_POPULATE)
       .skip(skip)
