@@ -6,7 +6,8 @@ const Chat = require('../model/chat');
 const { profileCompleted } = require('../middlewares/profileCompleted');
 
 const userRouter = express.Router();
-const USER_POPULATE = 'firstName lastName photo gender dateOfBirth bio createdAt subscription';
+const USER_POPULATE =
+  'firstName lastName photo gender dateOfBirth bio createdAt subscription isEmailVerified';
 
 userRouter.get('/user/request/received', userAuth, async (req, res) => {
   try {
