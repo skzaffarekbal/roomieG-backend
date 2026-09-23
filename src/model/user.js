@@ -53,6 +53,11 @@ const userSchema = mongoose.Schema(
       default: false,
     },
 
+    verificationToken: {
+      type: String,
+      default: null,
+    },
+
     isAdmin: {
       type: Boolean,
       default: false,
