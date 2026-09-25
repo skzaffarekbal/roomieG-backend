@@ -6,6 +6,7 @@ const User = require('../model/user');
 const { validateSignUpData } = require('../utils/validation');
 const { sendMail } = require('../service/mailService');
 const { userAuth } = require('../middlewares/auth');
+const { getVerificationEmailHtml, getVerificationResultPage } = require('../utils/emailTemplates');
 
 const authRouter = express.Router();
 
@@ -27,15 +28,13 @@ authRouter.post('/register', async (req, res) => {
 
     const savedUser = await user.save();
 
-    const verificationLink = `${process.env.BASE_URL}/verify-email?token=${verificationToken}&email=${emailId}`;
+    const verificationLink = `${process.env.BASE_URL}/verify-email?token=${verificationToken}&email=${encodeURIComponent(emailId)}`;
 
-    const subject = 'Verify Your Email Address';
-    const html = `
-      <h3>Welcome to RoomieG!</h3>
-      <p>Please click the link below to verify your email address:</p>
-      <a href="${verificationLink}" target="_blank">Verify Email</a>
-      <p>This link will expire in 24 hours.</p>
-    `;
+    const subject = 'Verify your email address - RoomieG';
+    const html = getVerificationEmailHtml({
+      firstName: savedUser.firstName,
+      verificationLink,
+    });
 
     await sendMail(emailId, subject, null, html);
 
@@ -55,22 +54,62 @@ authRouter.post('/register', async (req, res) => {
 authRouter.get('/verify-email', async (req, res) => {
   const { token, email } = req.query;
 
+  const frontendLoginUrl = process.env.FRONTEND_URL;
+
+  if (!email || !token) {
+    return res.status(400).send(
+      getVerificationResultPage({
+        success: false,
+        message: 'Invalid verification link. Missing token or email parameter.',
+        loginUrl: frontendLoginUrl,
+      }),
+    );
+  }
+
   const user = await User.findOne({ emailId: email });
 
   if (!user) {
-    return res.status(400).send('<h1>Verification Failed</h1><p>User not found.</p>');
+    return res.status(400).send(
+      getVerificationResultPage({
+        success: false,
+        message: 'User account not found. Please register again.',
+        loginUrl: frontendLoginUrl,
+      }),
+    );
+  }
+
+  if (user.isEmailVerified) {
+    return res.status(200).send(
+      getVerificationResultPage({
+        success: true,
+        message: 'Your email is already verified! You can proceed to log in.',
+        loginUrl: frontendLoginUrl,
+      }),
+    );
   }
 
   if (user.verificationToken !== token) {
-    return res.status(400).send('<h1>Verification Failed</h1><p>Invalid or expired token.</p>');
+    return res.status(400).send(
+      getVerificationResultPage({
+        success: false,
+        message:
+          'Verification link is invalid or has expired. Please request a new verification email.',
+        loginUrl: frontendLoginUrl,
+      }),
+    );
   }
+
   user.isEmailVerified = true;
   user.verificationToken = null;
   await user.save();
 
-  res
-    .status(200)
-    .send('<h1>Email Verified Successfully!</h1><p>You can now log in to your account.</p>');
+  return res.status(200).send(
+    getVerificationResultPage({
+      success: true,
+      message: 'Your email has been verified successfully. Welcome to the RoomieG community!',
+      loginUrl: frontendLoginUrl,
+    }),
+  );
 });
 
 authRouter.post('/resend-verification-mail', userAuth, async (req, res) => {
@@ -86,15 +125,13 @@ authRouter.post('/resend-verification-mail', userAuth, async (req, res) => {
     user.verificationToken = verificationToken;
     await user.save();
 
-    const verificationLink = `${process.env.BASE_URL}/verify-email?token=${verificationToken}&email=${emailId}`;
+    const verificationLink = `${process.env.BASE_URL}/verify-email?token=${verificationToken}&email=${encodeURIComponent(emailId)}`;
 
-    const subject = 'Verify Your Email Address';
-    const html = `
-      <h3>Welcome to RoomieG!</h3>
-      <p>Please click the link below to verify your email address:</p>
-      <a href="${verificationLink}" target="_blank">Verify Email</a>
-      <p>This link will expire in 24 hours.</p>
-    `;
+    const subject = 'Verify your email address - RoomieG';
+    const html = getVerificationEmailHtml({
+      firstName: user.firstName,
+      verificationLink,
+    });
 
     await sendMail(emailId, subject, null, html);
 
